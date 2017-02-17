@@ -1,0 +1,8 @@
+{
+  "resolution": "main",
+  "tree": {
+    "src": "https://raw.githubusercontent.com/DefinitelyTyped/DefinitelyTyped/df0018f90db5b89d3f791cd71f98c6bf44a30f23/gsap/index.d.ts",
+    "raw": "registry:dt/gsap#1.19.0+20161220140725",
+    "typings": "https://raw.githubusercontent.com/DefinitelyTyped/DefinitelyTyped/df0018f90db5b89d3f791cd71f98c6bf44a30f23/gsap/index.d.ts"
+  }
+}

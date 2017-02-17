@@ -1,6 +1,10 @@
 {
   "name": "jibo-programming-challenge",
   "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "mividtim/programming-challenge"
+  },
   "description": "",
   "main": "main.js",
   "license": "UNLICENSED",
@@ -22,17 +26,18 @@
   },
   "devDependencies": {
     "cross-conf-env": "latest",
-    "tsify": "latest",
-    "typescript": "^1.8.10",
+    "mapstraction": "latest",
     "parallelshell": "latest",
     "preprocessify": "latest",
-    "mapstraction": "latest",
     "rimraf": "latest",
+    "tsify": "latest",
+    "typescript": "^2.2.0",
     "watch": "latest",
     "watchify": "latest"
   },
   "dependencies": {
     "electron-prebuilt": "^1.4.1",
+    "gsap": "^1.19.1",
     "pixi.js": "^4.3.3"
   }
 }
