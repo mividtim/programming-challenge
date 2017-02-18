@@ -22,14 +22,16 @@ const enum DIRECTION {
 }
 
 class Game {
-  checker:PIXI.DisplayObject
+  checker1:PIXI.DisplayObject
+  checker2:PIXI.DisplayObject
   boardLayout:number[][]
-  checkerPosition:PIXI.Point
+  startingPosition:PIXI.Point
   squareSize:number
-  constructor(checker:PIXI.DisplayObject, boardLayout:number[][], checkerPosition:PIXI.Point, squareSize:number) {
-    this.checker = checker
+  constructor(checker1:PIXI.DisplayObject, checker2:PIXI.DisplayObject, boardLayout:number[][], startingPosition:PIXI.Point, squareSize:number) {
+    this.checker1 = checker1
+    this.checker2 = checker2
     this.boardLayout = boardLayout
-    this.checkerPosition = checkerPosition
+    this.startingPosition = startingPosition
     this.squareSize = squareSize
   }
 }
@@ -78,42 +80,81 @@ function newGame(gameBoard:PIXI.Container, rows:number, cols:number):Game {
   const boardLayout:number[][] = newBoardLayout(rows, cols)
   const squareSize:number = Math.min(SCREEN_WIDTH / cols, SCREEN_HEIGHT / rows) * .8
   createBoard(gameBoard, boardLayout, squareSize)
-  const checker:PIXI.DisplayObject = createChecker(squareSize)
-  gameBoard.addChild(checker)
-  const checkerPosition:PIXI.Point = randomPosition(boardLayout)
-  checker.position = boardPositionToPixels(boardLayout, squareSize, checkerPosition)
-  return new Game(checker, boardLayout, checkerPosition, squareSize)
+  const startingPosition:PIXI.Point = randomPosition(boardLayout)
+  const checker1:PIXI.DisplayObject = createChecker(squareSize)
+  gameBoard.addChild(checker1)
+  checker1.position = boardPositionToPixels(boardLayout, squareSize, startingPosition)
+  const checker2:PIXI.DisplayObject = createChecker(squareSize)
+  gameBoard.addChild(checker2)
+  checker2.position = boardPositionToPixels(boardLayout, squareSize, startingPosition)
+  return new Game(checker1, checker2, boardLayout, startingPosition, squareSize)
 }
 
-function play(game:Game):void {
-  const rows:number = game.boardLayout.length
-  const cols:number = game.boardLayout[0].length
-  const direction:DIRECTION = game.boardLayout[game.checkerPosition.x][game.checkerPosition.y]
+function play(game:Game, checker1Position:PIXI.Point = null, checker2Position:PIXI.Point = null, evenMove:boolean = false):void {
+  if(!checker1Position) {
+    checker1Position = new PIXI.Point(game.startingPosition.x, game.startingPosition.y)
+    checker2Position = new PIXI.Point(game.startingPosition.x, game.startingPosition.y)
+  }
+  let gameEnded:boolean = false
+  checker1Position = moveChecker(game.checker1, checker1Position, game.boardLayout, game.squareSize)
+  // Have to check before moving the second checker
+  gameEnded = testEndGame(game.boardLayout, checker1Position, checker2Position)
+  if(!gameEnded && evenMove) {
+    checker2Position = moveChecker(game.checker2, checker2Position, game.boardLayout, game.squareSize)
+    gameEnded = testEndGame(game.boardLayout, checker1Position, checker2Position)
+  }
+  if(gameEnded)
+    TweenLite.to(game.checker1.scale, .5, {x: 0, y: 0})
+  else
+    setTimeout(() => play(game, checker1Position, checker2Position, !evenMove), 500)
+}
+
+function moveChecker(checker:PIXI.DisplayObject, currentPosition:PIXI.Point, boardLayout:number[][], squareSize:number):PIXI.Point {
+  const direction:DIRECTION = boardLayout[currentPosition.x][currentPosition.y]
   let nextPosition:PIXI.Point
   switch(direction) {
     case DIRECTION.Up:
-      game.checkerPosition = new PIXI.Point(game.checkerPosition.x - 1, game.checkerPosition.y)
+      nextPosition = new PIXI.Point(currentPosition.x - 1, currentPosition.y)
       break;
     case DIRECTION.Down:
-      game.checkerPosition = new PIXI.Point(game.checkerPosition.x + 1, game.checkerPosition.y)
+      nextPosition = new PIXI.Point(currentPosition.x + 1, currentPosition.y)
       break;
     case DIRECTION.Left:
-      game.checkerPosition = new PIXI.Point(game.checkerPosition.x, game.checkerPosition.y - 1)
+      nextPosition = new PIXI.Point(currentPosition.x, currentPosition.y - 1)
       break;
     case DIRECTION.Right:
-      game.checkerPosition = new PIXI.Point(game.checkerPosition.x, game.checkerPosition.y + 1)
+      nextPosition = new PIXI.Point(currentPosition.x, currentPosition.y + 1)
       break;
   }
-  const pixelPosition:PIXI.Point = boardPositionToPixels(game.boardLayout, game.squareSize, game.checkerPosition)
-  TweenLite.to(game.checker.position, .3, {x: pixelPosition.x, y: pixelPosition.y})
-  if(game.checkerPosition.x < 0 || game.checkerPosition.x > rows - 1 || game.checkerPosition.y < 0 || game.checkerPosition.y > cols - 1) {
-    console.log("Fell off the board!", game.checkerPosition.x, game.checkerPosition.y)
-    setTimeout(() => TweenLite.to(game.checker.scale, .5, {x: 0, y: 0}), 500)
+  const pixelPosition:PIXI.Point = boardPositionToPixels(boardLayout, squareSize, nextPosition)
+  TweenLite.to(checker.position, .3, {x: pixelPosition.x, y: pixelPosition.y})
+  return nextPosition
+}
+
+function testEndGame(boardLayout:number[][], checker1Position:PIXI.Point, checker2Position:PIXI.Point):boolean {
+  let endGame:boolean = false
+  if(!validPosition(boardLayout, checker1Position)) {
+    console.info('The path is noncircular')
+    endGame = true
   }
-  else {
-    game.checker.scale = new PIXI.Point(1, 1)
-    setTimeout(() => play(game), 500)
+  else if(samePosition(checker1Position, checker2Position)) {
+    console.info('The path is circular')
+    endGame = true
   }
+  return endGame
+}
+
+function validPosition(boardLayout:number[][], position:PIXI.Point):boolean {
+  return !(
+    position.x < 0 ||
+    position.x > boardLayout.length - 1 ||
+    position.y < 0 ||
+    position.y > boardLayout[0].length - 1
+  )
+}
+
+function samePosition(position1:PIXI.Point, position2:PIXI.Point) {
+  return position1.x === position2.x && position1.y === position2.y
 }
 
 function newBoardLayout(rows, cols):number[][] {
