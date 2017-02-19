@@ -1,16 +1,16 @@
-/// <reference path="../typings/index.d.ts" />
+/// <reference path='../typings/index.d.ts' />
 import PIXI = require('pixi.js')
 import TweenLite = require('gsap/TweenLite')
+import {Sounds} from './sounds'
 
 const SCREEN_WIDTH:number = 1280
 const SCREEN_HEIGHT:number = 720
-const INITIAL_COLS:number = 20
-const INITIAL_ROWS:number = 10
+const INITIAL_SIZE:number = 20
 const COLOR_BUTTON:number = 0x444411
 const COLOR_EVEN:number = 0xee1111
 const COLOR_ODD:number = 0x111111
 const COLOR_ARROW:number = 0xeeeeee
-const COLOR_CHECKER:number = 0x11eeee
+const COLOR_CHECKER:number = 0x111111
 const BUTTON_WIDTH:number = 150
 const BUTTON_HEIGHT:number = 50
 
@@ -21,92 +21,162 @@ const enum DIRECTION {
   Left
 }
 
-class Game {
+class Visualization {
   checker1:PIXI.DisplayObject
   checker2:PIXI.DisplayObject
   boardLayout:number[][]
   startingPosition:PIXI.Point
   squareSize:number
-  constructor(checker1:PIXI.DisplayObject, checker2:PIXI.DisplayObject, boardLayout:number[][], startingPosition:PIXI.Point, squareSize:number) {
+  sounds:Sounds
+  running:boolean
+  timeout:number
+  message:PIXI.Text
+  constructor(checker1:PIXI.DisplayObject, checker2:PIXI.DisplayObject, boardLayout:number[][], startingPosition:PIXI.Point, squareSize:number, sounds:Sounds) {
     this.checker1 = checker1
     this.checker2 = checker2
     this.boardLayout = boardLayout
     this.startingPosition = startingPosition
     this.squareSize = squareSize
+    this.sounds = sounds
+    this.running = false
   }
 }
 
 (function():void {
+  const sounds:Sounds = new Sounds({
+    move: './sounds/move.mp3',
+    collide: './sounds/collide.wav',
+    fall: './sounds/fall.wav',
+  })
   const renderer:PIXI.WebGLRenderer = new PIXI.WebGLRenderer(SCREEN_WIDTH, SCREEN_HEIGHT)
   document.body.appendChild(renderer.view)
   const stage:PIXI.Container = new PIXI.Container()
   renderLoop(renderer, stage)
-  const gameBoard:PIXI.Container = new PIXI.Container()
-  gameBoard.position = new PIXI.Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - BUTTON_HEIGHT / 2)
-  stage.addChild(gameBoard)
-  const game:Game = newGame(gameBoard, INITIAL_ROWS, INITIAL_COLS)
-  createControls(stage, gameBoard, game)
+  const visualizationBoard:PIXI.Container = new PIXI.Container()
+  visualizationBoard.position = new PIXI.Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - BUTTON_HEIGHT / 2)
+  stage.addChild(visualizationBoard)
+  const visualization:Visualization = newVisualization(visualizationBoard, INITIAL_SIZE, sounds)
+  createControls(stage, visualizationBoard, visualization)
 })()
 
-function createControls(stage:PIXI.Container, gameBoard:PIXI.Container, game:Game) {
+function createControls(stage:PIXI.Container, visualizationBoard:PIXI.Container, visualization:Visualization) {
+  function changeSize(amount:number) {
+    stop(visualization)
+    let newSize:number = visualization.boardLayout.length + amount
+    if(newSize < 1)
+      newSize = 1
+    // Keep track of the message text in the new visualization
+    const message:PIXI.Text = visualization.message
+    message.text = 'Press Play to Begin'
+    visualization = newVisualization(visualizationBoard, newSize, visualization.sounds)
+    visualization.message = message
+  }
+  stage.addChild(createButton(
+    SCREEN_WIDTH / 2 - BUTTON_WIDTH * 1.5 - 60,
+    SCREEN_HEIGHT - BUTTON_HEIGHT / 2 - 50,
+    '-',
+    () => changeSize(-1),
+    true // small button
+  ))
+  stage.addChild(createButton(
+    SCREEN_WIDTH / 2 - BUTTON_WIDTH * 2 - 80,
+    SCREEN_HEIGHT - BUTTON_HEIGHT / 2 - 50,
+    '+',
+    () => changeSize(1),
+    true // small button
+  ))
   stage.addChild(createButton(
     SCREEN_WIDTH / 2 - BUTTON_WIDTH / 2 - 20,
     SCREEN_HEIGHT - BUTTON_HEIGHT / 2 - 50,
-    'New Game',
-    () => game = newGame(gameBoard, INITIAL_ROWS, INITIAL_COLS)))
+    'Shuffle',
+    () => {
+      stop(visualization)
+      // Keep track of the message text in the new visualization
+      const message:PIXI.Text = visualization.message
+      message.text = 'Press Play to Begin'
+      visualization = newVisualization(visualizationBoard, visualization.boardLayout.length, visualization.sounds)
+      visualization.message = message
+    }
+  ))
   stage.addChild(createButton(
     SCREEN_WIDTH / 2 + BUTTON_WIDTH / 2 + 20,
     SCREEN_HEIGHT - BUTTON_HEIGHT / 2 - 50,
     'Play',
-    () => play(game)))
+    () => { if(!visualization.running) play(visualization) }
+  ))
+  stage.addChild(createButton(
+    SCREEN_WIDTH / 2 + BUTTON_WIDTH * 1.5 + 60,
+    SCREEN_HEIGHT - BUTTON_HEIGHT / 2 - 50,
+    'Stop',
+    () => {
+      if(visualization.running) {
+        visualization.message.text = 'Stopped'
+        stop(visualization)
+      }
+    }
+  ))
+  visualization.message = new PIXI.Text('Press Play to Begin', {
+    fill: [0xcccccc, COLOR_BUTTON],
+    stroke: 0xeeeeee,
+    strokeThickness: 2
+  })
+  visualization.message.anchor.x = .5
+  visualization.message.position = new PIXI.Point(SCREEN_WIDTH / 2, 20)
+  stage.addChild(visualization.message)
 }
 
-function createButton(x:number, y:number, label:string, action):PIXI.Graphics {
-  const button = new PIXI.Graphics()
-  button.position = new PIXI.Point(x - BUTTON_WIDTH / 2, y - BUTTON_HEIGHT / 2)
-  button.lineStyle(2, 0xeeeeee)
-  button.beginFill(COLOR_BUTTON)
-  button.drawRect(0, 0, BUTTON_WIDTH, BUTTON_HEIGHT)
-  button.endFill()
-  const text:PIXI.Text = new PIXI.Text(label, {stroke: 0xeeeeee, fill: 0x111111, strokeThickness: 2, align: 'center', lineJoin: 'round'})
-  button.addChild(text)
-  button.interactive = true
-  button.on("mouseup", action)
-  button.on("touchend", action)
-  return button
-}
-
-function newGame(gameBoard:PIXI.Container, rows:number, cols:number):Game {
-  const boardLayout:number[][] = newBoardLayout(rows, cols)
-  const squareSize:number = Math.min(SCREEN_WIDTH / cols, SCREEN_HEIGHT / rows) * .8
-  createBoard(gameBoard, boardLayout, squareSize)
+function newVisualization(visualizationBoard:PIXI.Container, boardSize:number, sounds:Sounds):Visualization {
+  const boardLayout:number[][] = newBoardLayout(boardSize)
+  const squareSize:number = Math.min(SCREEN_WIDTH / boardSize, SCREEN_HEIGHT / boardSize) * .75
+  createBoard(visualizationBoard, boardLayout, squareSize)
   const startingPosition:PIXI.Point = randomPosition(boardLayout)
   const checker1:PIXI.DisplayObject = createChecker(squareSize)
-  gameBoard.addChild(checker1)
-  checker1.position = boardPositionToPixels(boardLayout, squareSize, startingPosition)
+  visualizationBoard.addChild(checker1)
+  checker1.position = boardPositionToPixels(boardLayout.length, squareSize, startingPosition)
   const checker2:PIXI.DisplayObject = createChecker(squareSize)
-  gameBoard.addChild(checker2)
-  checker2.position = boardPositionToPixels(boardLayout, squareSize, startingPosition)
-  return new Game(checker1, checker2, boardLayout, startingPosition, squareSize)
+  visualizationBoard.addChild(checker2)
+  checker2.position = boardPositionToPixels(boardLayout.length, squareSize, startingPosition)
+  return new Visualization(checker1, checker2, boardLayout, startingPosition, squareSize, sounds)
 }
 
-function play(game:Game, checker1Position:PIXI.Point = null, checker2Position:PIXI.Point = null, evenMove:boolean = false):void {
+function play(visualization:Visualization, checker1Position:PIXI.Point = null, checker2Position:PIXI.Point = null, evenMove:boolean = false):void {
+  visualization.message.text = "Running"
+  visualization.running = true
   if(!checker1Position) {
-    checker1Position = new PIXI.Point(game.startingPosition.x, game.startingPosition.y)
-    checker2Position = new PIXI.Point(game.startingPosition.x, game.startingPosition.y)
+    checker1Position = new PIXI.Point(visualization.startingPosition.x, visualization.startingPosition.y)
+    checker2Position = new PIXI.Point(visualization.startingPosition.x, visualization.startingPosition.y)
   }
-  let gameEnded:boolean = false
-  checker1Position = moveChecker(game.checker1, checker1Position, game.boardLayout, game.squareSize)
+  let endCondition:string
+  checker1Position = moveChecker(visualization.checker1, checker1Position, visualization.boardLayout, visualization.squareSize)
   // Have to check before moving the second checker
-  gameEnded = testEndGame(game.boardLayout, checker1Position, checker2Position)
-  if(!gameEnded && evenMove) {
-    checker2Position = moveChecker(game.checker2, checker2Position, game.boardLayout, game.squareSize)
-    gameEnded = testEndGame(game.boardLayout, checker1Position, checker2Position)
+  endCondition = testEndCondition(visualization.boardLayout, checker1Position, checker2Position)
+  if(!endCondition && evenMove) {
+    checker2Position = moveChecker(visualization.checker2, checker2Position, visualization.boardLayout, visualization.squareSize)
+    endCondition = testEndCondition(visualization.boardLayout, checker1Position, checker2Position)
   }
-  if(gameEnded)
-    TweenLite.to(game.checker1.scale, .5, {x: 0, y: 0})
+  visualization.sounds.play('move')
+  if(endCondition) {
+    TweenLite.to(visualization.checker1.scale, .5, {x: 0, y: 0})
+    visualization.message.text = endCondition
+    visualization.sounds.play(endCondition.indexOf('non') < 0 ? 'collide' : 'fall')
+    setTimeout(() => stop(visualization), 500)
+  }
   else
-    setTimeout(() => play(game, checker1Position, checker2Position, !evenMove), 500)
+    visualization.timeout = setTimeout(() => play(visualization, checker1Position, checker2Position, !evenMove), 500)
+}
+
+function stop(visualization:Visualization) {
+  if(visualization.running) {
+    if(visualization.timeout) {
+      clearTimeout(visualization.timeout)
+      visualization.timeout = null
+    }
+    const pixelPosition:PIXI.Point = boardPositionToPixels(visualization.boardLayout.length, visualization.squareSize, visualization.startingPosition)
+    TweenLite.to(visualization.checker1.scale, .3, {x: 1, y: 1})
+    TweenLite.to(visualization.checker1.position, .3, {x: pixelPosition.x, y: pixelPosition.y})
+    TweenLite.to(visualization.checker2.position, .3, {x: pixelPosition.x, y: pixelPosition.y})
+    visualization.running = false
+  }
 }
 
 function moveChecker(checker:PIXI.DisplayObject, currentPosition:PIXI.Point, boardLayout:number[][], squareSize:number):PIXI.Point {
@@ -126,22 +196,18 @@ function moveChecker(checker:PIXI.DisplayObject, currentPosition:PIXI.Point, boa
       nextPosition = new PIXI.Point(currentPosition.x, currentPosition.y + 1)
       break;
   }
-  const pixelPosition:PIXI.Point = boardPositionToPixels(boardLayout, squareSize, nextPosition)
+  const pixelPosition:PIXI.Point = boardPositionToPixels(boardLayout.length, squareSize, nextPosition)
   TweenLite.to(checker.position, .3, {x: pixelPosition.x, y: pixelPosition.y})
   return nextPosition
 }
 
-function testEndGame(boardLayout:number[][], checker1Position:PIXI.Point, checker2Position:PIXI.Point):boolean {
-  let endGame:boolean = false
-  if(!validPosition(boardLayout, checker1Position)) {
-    console.info('The path is noncircular')
-    endGame = true
-  }
-  else if(samePosition(checker1Position, checker2Position)) {
-    console.info('The path is circular')
-    endGame = true
-  }
-  return endGame
+function testEndCondition(boardLayout:number[][], checker1Position:PIXI.Point, checker2Position:PIXI.Point):string {
+  let endCondition:string
+  if(!validPosition(boardLayout, checker1Position))
+    endCondition = 'The path is noncircular.'
+  else if(samePosition(checker1Position, checker2Position))
+    endCondition = 'The path is circular.'
+  return endCondition
 }
 
 function validPosition(boardLayout:number[][], position:PIXI.Point):boolean {
@@ -157,11 +223,11 @@ function samePosition(position1:PIXI.Point, position2:PIXI.Point) {
   return position1.x === position2.x && position1.y === position2.y
 }
 
-function newBoardLayout(rows, cols):number[][] {
+function newBoardLayout(size):number[][] {
   const boardLayout:number[][] = []
-  for(let row:number = 0 ; row < rows ; row++) {
+  for(let row:number = 0 ; row < size ; row++) {
     boardLayout.push([])
-    for(let col:number = 0 ; col < cols ; col++) {
+    for(let col:number = 0 ; col < size ; col++) {
       const boardPosition:PIXI.Point = new PIXI.Point(row, col)
       const arrowDirection:DIRECTION = Math.floor(Math.random() * 4)
       boardLayout[row].push(arrowDirection)
@@ -170,24 +236,24 @@ function newBoardLayout(rows, cols):number[][] {
   return boardLayout
 }
 
-function createBoard(gameBoard:PIXI.Container, boardLayout:number[][], squareSize:number):PIXI.Container {
-  clearContainer(gameBoard)
-  const rows = boardLayout.length
-  const cols = boardLayout[0].length
+function createBoard(visualizationBoard:PIXI.Container, boardLayout:number[][], squareSize:number):PIXI.Container {
+  clearContainer(visualizationBoard)
+  const rows:number = boardLayout.length
+  const cols:number = boardLayout[0].length
   let even:boolean = false
   for(let row:number = 0 ; row < rows ; row++) {
     for(let col:number = 0 ; col < cols ; col++) {
       const boardPosition:PIXI.Point = new PIXI.Point(row, col)
       const square:PIXI.Graphics = createSquare(squareSize, even)
-      square.position = boardPositionToPixels(boardLayout, squareSize, boardPosition)
-      gameBoard.addChild(square)
+      square.position = boardPositionToPixels(boardLayout.length, squareSize, boardPosition)
+      visualizationBoard.addChild(square)
       square.addChild(createArrow(squareSize, boardLayout[row][col]))
       even = !even
     }
     if(rows % 2 === 0)
       even = !even
   }
-  return gameBoard
+  return visualizationBoard
 }
 
 function createSquare(size:number, even:boolean):PIXI.Graphics {
@@ -215,16 +281,36 @@ function createArrow(size:number, direction:DIRECTION):PIXI.Graphics {
 function createChecker(size:number):PIXI.Graphics {
   const checker:PIXI.Graphics = new PIXI.Graphics()
   checker.alpha = .75
+  checker.lineStyle(2, 0xeeeeee)
   checker.beginFill(COLOR_CHECKER)
   checker.drawCircle(0, 0, size * .3)
   checker.endFill()
   return checker
 }
 
-function boardPositionToPixels(boardLayout:number[][], size:number, boardPosition:PIXI.Point):PIXI.Point {
+function createButton(x:number, y:number, label:string, action, small:boolean = false):PIXI.Graphics {
+  const button:PIXI.Graphics = new PIXI.Graphics()
+  const width:number = small ? BUTTON_WIDTH / 2 : BUTTON_WIDTH
+  button.position = new PIXI.Point(x - width / 2, y - BUTTON_HEIGHT / 2)
+  button.lineStyle(2, 0xeeeeee)
+  button.beginFill(COLOR_BUTTON)
+  button.drawRect(0, 0, width, BUTTON_HEIGHT)
+  button.endFill()
+  const text:PIXI.Text = new PIXI.Text(label, {stroke: 0xeeeeee, fill: 0x111111, strokeThickness: 2, align: 'center', lineJoin: 'round'})
+  text.position = new PIXI.Point(width / 2, BUTTON_HEIGHT / 2)
+  text.anchor.x = .5
+  text.anchor.y = .5
+  button.addChild(text)
+  button.interactive = true
+  button.on('mouseup', action)
+  button.on('touchend', action)
+  return button
+}
+
+function boardPositionToPixels(boardSize:number, squareSize:number, boardPosition:PIXI.Point):PIXI.Point {
   return new PIXI.Point(
-    (boardPosition.y - boardLayout[0].length / 2) * size,
-    (boardPosition.x - boardLayout.length / 2) * size
+    (boardPosition.y - boardSize / 2) * squareSize,
+    (boardPosition.x - boardSize / 2) * squareSize
   )
 }
 

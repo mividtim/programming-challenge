@@ -8,6 +8,9 @@
   "description": "",
   "main": "main.js",
   "license": "UNLICENSED",
+  "engines": {
+    "node": "6.9.5"
+  },
   "config": {
     "watch": "src",
     "app": "src/index.ts",
@@ -15,7 +18,7 @@
     "map": "index.js.map"
   },
   "scripts": {
-    "exe": "./node_modules/.bin/electron main.js main.js",
+    "exe": "./node_modules/.bin/electron main.js",
     "start": "npm run watch",
     "clean": "cross-conf-env rimraf npm_package_config_bundle",
     "build": "cross-conf-env browserify -s npm_package_name npm_package_config_app -o npm_package_config_bundle -p [tsify --target='es6'] -t [preprocessify --contextFile build/debug.json] --no-bundle-external --debug",
@@ -29,10 +32,10 @@
     "mapstraction": "latest",
     "parallelshell": "latest",
     "preprocessify": "latest",
-    "rimraf": "latest",
+    "rimraf": "^2.6.0",
     "tsify": "latest",
     "typescript": "^2.2.0",
-    "watch": "latest",
+    "watch": "^1.0.2",
     "watchify": "latest"
   },
   "dependencies": {
