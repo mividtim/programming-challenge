@@ -223,7 +223,7 @@ function samePosition(position1:PIXI.Point, position2:PIXI.Point) {
   return position1.x === position2.x && position1.y === position2.y
 }
 
-function newBoardLayout(size):number[][] {
+function newBoardLayout(size:number):number[][] {
   const boardLayout:number[][] = []
   for(let row:number = 0 ; row < size ; row++) {
     boardLayout.push([])
@@ -238,11 +238,10 @@ function newBoardLayout(size):number[][] {
 
 function createBoard(visualizationBoard:PIXI.Container, boardLayout:number[][], squareSize:number):PIXI.Container {
   clearContainer(visualizationBoard)
-  const rows:number = boardLayout.length
-  const cols:number = boardLayout[0].length
+  const size:number = boardLayout.length
   let even:boolean = false
-  for(let row:number = 0 ; row < rows ; row++) {
-    for(let col:number = 0 ; col < cols ; col++) {
+  for(let row:number = 0 ; row < size ; row++) {
+    for(let col:number = 0 ; col < size ; col++) {
       const boardPosition:PIXI.Point = new PIXI.Point(row, col)
       const square:PIXI.Graphics = createSquare(squareSize, even)
       square.position = boardPositionToPixels(boardLayout.length, squareSize, boardPosition)
@@ -250,7 +249,7 @@ function createBoard(visualizationBoard:PIXI.Container, boardLayout:number[][], 
       square.addChild(createArrow(squareSize, boardLayout[row][col]))
       even = !even
     }
-    if(rows % 2 === 0)
+    if(size % 2 === 0)
       even = !even
   }
   return visualizationBoard
@@ -317,7 +316,7 @@ function boardPositionToPixels(boardSize:number, squareSize:number, boardPositio
 function randomPosition(boardLayout:number[][]):PIXI.Point {
   return new PIXI.Point(
       Math.floor(Math.random() * boardLayout.length),
-      Math.floor(Math.random() * boardLayout[0].length)
+      Math.floor(Math.random() * boardLayout.length)
   )
 }
 
