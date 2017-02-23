@@ -1,7 +1,7 @@
-export class Sounds {
-  sounds = {}
-  constructor(sounds) {
-    for (let sound in sounds) {
+export class SoundManager {
+  sounds:{[key:string]:HTMLAudioElement} = {}
+  constructor(sounds:{[key:string]:string}) {
+    for(let sound in sounds) {
       const audio = new Audio()
       audio.src = sounds[sound]
       audio.preload = 'true'
