@@ -31,8 +31,18 @@ export class Simulation {
   // positions)
   public resize(size:number, startingPosition:Position = null):void {
     this.size = size
+    // Remove rows down to the proper size
     while(this.layout.length > size)
       this.layout.pop()
+    for(let row = 0 ; row < this.layout.length ; row++) {
+      // Remove columns from each remaining row down to the proper size
+      while(this.layout[row].length > size)
+        this.layout[row].pop()
+      // Add columns to the existing rows up to the proper size
+      while(size > this.layout[row].length)
+        this.layout[row].push(0)
+    }
+    // Add rows up to the proper size
     while(size > this.layout.length)
       this.addRow(this.layout.length)
     this.shuffle(startingPosition)
@@ -76,6 +86,10 @@ export class Simulation {
     this.evenMove = !this.evenMove
   }
 
+  public static samePosition(position1:Position, position2:Position) {
+    return position1.row === position2.row && position1.col === position2.col
+  }
+
   private addRow(row:number):void {
     this.layout.push([])
     for(let col:number = 0 ; col < this.size ; col++)
@@ -111,7 +125,7 @@ export class Simulation {
     this.state =
       !this.validPosition(this.pointerOnePosition)
         ? SimulationState.Noncircular
-      : this.samePosition(this.pointerOnePosition, this.pointerTwoPosition)
+      : Simulation.samePosition(this.pointerOnePosition, this.pointerTwoPosition)
         ? SimulationState.Circular
       : SimulationState.Running
   }
@@ -123,10 +137,6 @@ export class Simulation {
       position.col < 0 ||
       position.col > this.size - 1
     )
-  }
-
-  private samePosition(position1:Position, position2:Position) {
-    return position1.row === position2.row && position1.col === position2.col
   }
 
 }

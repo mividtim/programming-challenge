@@ -22,7 +22,9 @@
     "start": "npm run watch",
     "clean": "cross-conf-env rimraf npm_package_config_bundle",
     "build": "cross-conf-env browserify -s npm_package_name npm_package_config_app -o npm_package_config_bundle -p [tsify --target='es6'] -t [preprocessify --contextFile build/debug.json] --no-bundle-external --debug",
-    "watch": "cross-conf-env watchify  -s npm_package_name npm_package_config_app -o npm_package_config_bundle -p [tsify --target='es6'] -t [preprocessify --contextFile build/debug.json] --no-bundle-external --debug -dv"
+    "watch": "cross-conf-env watchify  -s npm_package_name npm_package_config_app -o npm_package_config_bundle -p [tsify --target='es6'] -t [preprocessify --contextFile build/debug.json] --no-bundle-external --debug -dv",
+    "test": "./node_modules/.bin/mocha --opts mocha.opts",
+    "test:watch": "./node_modules/.bin/mocha --opts mocha.opts --watch"
   },
   "browserify": {
     "transform": []
@@ -30,9 +32,11 @@
   "devDependencies": {
     "cross-conf-env": "latest",
     "mapstraction": "latest",
+    "mocha": "^3.2.0",
     "parallelshell": "latest",
     "preprocessify": "latest",
     "rimraf": "^2.6.0",
+    "ts-node": "^2.1.0",
     "tsify": "latest",
     "typescript": "^2.2.0",
     "watch": "^1.0.2",
