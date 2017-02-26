@@ -1,136 +1,88 @@
 import * as fs from 'fs'
+import * as EventEmitter from 'events'
 import * as PIXI from 'pixi.js'
 import {TweenLite} from 'gsap/TweenLite'
-import {Direction, Position, SimulationState} from './types'
-import {Simulation} from './simulation'
 import {SoundManager} from './sound-manager'
-import {Square} from './square'
+import {
+  BoardPosition,
+  Direction,
+  BoardLayout
+} from './components/checkers/board-layout'
+import {Button, ButtonStyle} from './components/ui/button'
+import {Checker} from './components/checkers/checker'
+import {DirectedCheckerBoard} from
+  './components/checkers/directed/directed-checker-board'
+import {HorizontalCenter} from './components/layouts/horizontal-center'
+import {FullScreenHeaderFooter} from
+  './components/layouts/full-screen-header-footer'
 
 const config =
   JSON.parse(fs.readFileSync('./config.json', 'utf-8')).visualization
 
-export class Visualization {
+export class Visualization extends EventEmitter {
 
-  private simulation:Simulation
-  // Event handlers for the buttons, passed from the controller
-  private onplay:()=>void
-  private onstop:()=>void
-  private onresize:(amount:number)=>void
-  private onshuffle:()=>void
-  private stage:PIXI.Container
-  // Board is public so Squares can handling adding their square:PIXI.Graphics
-  // to it; could use some instane methods here to protect it, instead
-  public board:PIXI.Container
-  private checker1:PIXI.DisplayObject
-  private checker2:PIXI.DisplayObject
-  // Public so Squares can see; could use an instance method to protect it
-  public squareSize:number
+  private screenLayout:FullScreenHeaderFooter
+  private board:DirectedCheckerBoard
+  private checker1:Checker
+  private checker2:Checker
   private renderer:PIXI.WebGLRenderer
-  private squares:Square[][] = []
   private message:PIXI.Text
   private soundManager:SoundManager = new SoundManager(config.sounds)
 
-  public constructor(
-    simulation:Simulation,
-    onplay:()=>void,
-    onstop:()=>void,
-    onresize:(amount:number)=>void,
-    onshuffle:()=>void
-  ) {
-    // Keep a copy of the simulation for reference by instance methods
-    this.simulation = simulation
-    // Set up the button event handlers to we can tell the controller when
-    // they're pressed
-    this.onplay = onplay
-    this.onstop = onstop
-    this.onresize = onresize
-    this.onshuffle = onshuffle
-    // The root stage container is passed into render() by renderLoop()
-    // It will contain the message, the board, and the buttons
-    this.stage = new PIXI.Container()
-    // Set up the renderer, add the canvas to the page, and start the render
-    // loop (renders every frame with requestAnimationFrame)
-    this.renderer =
-      new PIXI.WebGLRenderer(
-        document.documentElement.clientWidth,
-        document.documentElement.clientHeight,
-        {antialias: true})
-    document.body.appendChild(this.renderer.view)
-    this.renderLoop()
-    // This adds the message and buttons to the stage
-    this.createUI()
-    // The board will contain the checkers and squares
-    this.stage.addChild(this.board = new PIXI.Container())
-    this.board.position = new PIXI.Point(
-      this.renderer.width / 2,
-      this.renderer.height / 2 - config.button.height / 2
-    )
-    // refresh() adds the squares, and their arrows, to the board
-    // It will add squares of the appropriate size and position themselves to
-    // fill the simulation size. It will also destroy extra squares when the
-    // simulation is downsized.
-    this.refresh()
-    // restart() moves the checkers to the starting position and places them
-    // on top of all board squares (including new ones)
-    this.restart()
+  public constructor(boardLayout:BoardLayout) {
+    super()
+    // This creates the full-screen layout and adds the message to the header
+    // and buttons to the footer
+    this.setupUI()
+    this.setupBoard(boardLayout)
+    this.setupCheckers()
+    // Create a WebGL renderer at window dimensions; begin render loop
+    this.startRendering()
   }
 
-  public refresh():void {
-    // Determine the square size based on the window size and simulation size
-    const boardSize:number =
-      Math.min(this.renderer.width, this.renderer.height)
-        - this.message.height
-        - config.button.height
-        - config.button.fromBottom
-        - config.message.fromTop
-        - config.margin * 2
-    this.squareSize = boardSize / this.simulation.size
-    if(this.checker1) {
-      this.board.removeChild(this.checker1)
-      this.board.removeChild(this.checker2)
-      this.checker1.destroy()
-      this.checker2.destroy()
-    }
-    // The checkers are children of the board so they can be positioned
-    // using the same routine as the squares, boardPositionToPixels()
-    this.checker1 = this.createChecker()
-    this.checker2 = this.createChecker()
-    // Delete any squares that exceed the current simulation layout size
-    this.shrinkBoardAsNeeded()
-    // Create squares as needed, set their position and color,
-    // and set all arrow directions from the simulation layout
-    this.setupBoard()
-  }
-
-  public restart():void {
+  public setBoardLayout(boardLayout:BoardLayout):void {
     // Stop any ongoing animations
-    TweenLite.killTweensOf(this.checker1.position)
-    TweenLite.killTweensOf(this.checker1.scale)
-    TweenLite.killTweensOf(this.checker2.position)
-    // Move the checkers to the simulation starting positions
-    const pixelPosition:PIXI.Point =
-      this.boardPositionToPixels(this.simulation.startingPosition)
-    this.checker1.position = pixelPosition
-    this.checker2.position = pixelPosition
-    this.board.removeChild(this.checker1)
-    this.board.removeChild(this.checker2)
-    this.board.addChild(this.checker1)
-    this.board.addChild(this.checker2)
-    // Resize the first checker to scale one, since it is shrunk to zero scale
-    // when a simulation is completed
+    this.stop()
+    // Resize the board as needed - the board takes care of creating squares
+    if(this.board.size !== boardLayout.length)
+      this.resize(boardLayout.length)
+    // Set the arrow directions on the board
+    this.board.setBoardLayout(boardLayout)
+    // Make sure the checkers are on top of any new squares
+    this.board.toTop(this.checker1)
+    this.board.toTop(this.checker2)
+  }
+
+  // Resize the first checker to scale one, since it is shrunk to zero scale
+  // when a simulation is started
+  public restart():void {
     this.checker1.scale.set(1, 1)
   }
 
-  // Called by the controller to set the appropriate text at screen top
+  // Stop any ongoing animations
+  public stop() {
+    TweenLite.killTweensOf(this.checker1.position)
+    TweenLite.killTweensOf(this.checker1.scale)
+    TweenLite.killTweensOf(this.checker2.position)
+  }
+
+  // Show the given text at screen top
   public showMessage(message:string):void {
     this.message.text = message
   }
 
-  // Called by the controller to move the checker to a new position
-  public moveChecker(number:number, position:Position):void {
+  // Place the given checker at the given position, without animating
+  public placeChecker(number:number, position:BoardPosition) {
     const checker:PIXI.DisplayObject =
       number === 1 ? this.checker1 : this.checker2
-    const pixelPosition:PIXI.Point = this.boardPositionToPixels(position)
+    checker.position = this.board.boardPositionToPixels(position)
+  }
+
+  // Animate moving the checker to a new position
+  public moveChecker(number:number, position:BoardPosition):void {
+    const checker:PIXI.DisplayObject =
+      number === 1 ? this.checker1 : this.checker2
+    const pixelPosition:PIXI.Point = this.board.boardPositionToPixels(position)
     // Use the Greensock TweenLite library to animate the movement
     TweenLite.to(
       checker.position,
@@ -140,222 +92,160 @@ export class Visualization {
     this.soundManager.play('move')
   }
 
-  // Called by the controller when the simulation ends
-  // The state is a determination of whether or not the path is circular
-  public endVisualization(state:SimulationState) {
+  public collide() {
     // Shrink the first checker to scale zero
     TweenLite.to(this.checker1.scale, .5, {x: 0, y: 0})
-    // Play collision or fall sound
-    switch(state) {
-      case SimulationState.Circular:
-        this.soundManager.play('collide')
-        break
-      case SimulationState.Noncircular:
-        this.soundManager.play('fall')
-        break
-    }
+    this.soundManager.play('collide')
   }
 
-  public boardPositionToPixels(boardPosition:Position):PIXI.Point {
-    return new PIXI.Point(
-      (boardPosition.col - this.simulation.size / 2) * this.squareSize + this.squareSize / 2,
-      (boardPosition.row - this.simulation.size / 2) * this.squareSize + this.squareSize / 2
-    )
+  public fall() {
+    // Shrink the first checker to scale zero
+    TweenLite.to(this.checker1.scale, .5, {x: 0, y: 0})
+    this.soundManager.play('fall')
+  }
+
+  private startRendering():void {
+    // The screenLayout container is passed into render() by renderLoop()
+    // It contains the message, the board, and the buttons
+    // Set up the renderer, add the canvas to the page, and start the render
+    // loop (renders every frame with requestAnimationFrame)
+    this.renderer =
+      new PIXI.WebGLRenderer(
+        document.documentElement.clientWidth,
+        document.documentElement.clientHeight,
+        // Smooth edges of curves created with PIXI.Graphics
+        {antialias: true})
+    document.body.appendChild(this.renderer.view)
+    this.renderLoop()
+  }
+
+  // Fat arrow to preserve "this"
+  private renderLoop = ():void => {
+    requestAnimationFrame(this.renderLoop)
+    this.renderer.render(this.screenLayout)
   }
 
   // Creates the message and the buttons, and set up the event handling
-  // The positioning could certainly use some enhancement - TDB
-  // Dynamically centering them as they are added to a container, for example
-  private createUI() {
-    const positionY =
-      this.renderer.height - config.button.fromBottom - config.button.height / 2
-    // Resize+ Button
-    // Reduce the simulation size by one when pressed
-    this.createButton(
-      new PIXI.Point(
-        this.renderer.width / 2
-          - config.button.width * 1.5
-          - config.margin * 1.5,
-        positionY
-      ),
-      '-',
-      () => this.onresize(-1),
-      true // small button
-    )
-    // Resize- Button
-    // Increase the simulation size by one when pressed
-    this.createButton(
-      new PIXI.Point(
-        this.renderer.width / 2 - config.button.width * 2 - config.margin,
-        positionY
-      ),
-      '+',
-      () => this.onresize(1),
-      true // small button
-    )
-    // Shuffle Button
-    // Shuffle the arrow directions
-    this.createButton(
-      new PIXI.Point(
-        this.renderer.width / 2 - config.button.width / 2 - config.margin / 2,
-        positionY
-      ),
-      'Shuffle',
-      this.onshuffle
-    )
-    // Play Button
-    // Start the simulation; the controller will handle delaying the
-    // simulation's iterator to allow the visualization time to animate
-    this.createButton(
-      new PIXI.Point(
-        this.renderer.width / 2 + config.button.width / 2 + config.margin / 2,
-        positionY
-      ),
-      'Play',
-      this.onplay
-    )
-    // Stop Button
-    // Stop the simluation and move the checkers back to starting position
-    this.createButton(
-      new PIXI.Point(
-        this.renderer.width / 2 + config.button.width * 1.5 + config.margin,
-        positionY
-      ),
-      'Stop',
-      this.onstop
-    )
-    // Message that appears on the top of the screen
-    // The message text is set by the controller using showMessage()
-    this.stage.addChild(this.message = new PIXI.Text('Press Play to Begin', {
-      align: config.message.align,
-      lineJoin: config.message.lineJoin,
-      fill: config.message.fill.map(color => PIXI.utils.rgb2hex(color)),
-      stroke: PIXI.utils.rgb2hex(config.message.stroke),
-      strokeThickness: config.message.strokeThickness
-    }))
-    this.message.anchor.set(.5, 0)
-    this.message.position = new PIXI.Point(
-      this.renderer.width / 2,
-      config.message.fromTop
-    )
+  private setupUI():void {
+    this.message = this.createMessage()
+    const header:PIXI.Container = new HorizontalCenter(config.margin)
+    header.addChild(this.message)
+    const footer:PIXI.Container = this.createButtons()
+    this.screenLayout =
+      new FullScreenHeaderFooter(new HorizontalCenter, header, footer)
   }
 
-  private createButton(
-    position:PIXI.Point,
-    label:string,
-    action:{():void},
-    small:boolean = false
-  ):PIXI.Graphics {
-    const button:PIXI.Graphics = new PIXI.Graphics()
-    // Small buttons are half the configured width
-    const width:number = config.button.width * (small ? .5 : 1)
-    // Center the button at the given position
-    // Keeps centering of text simpler than moving top/left of drawRect
-    button.position = new PIXI.Point(
-      position.x - width / 2,
-      position.y - config.button.height / 2
-    )
-    // Set the styles from the config and draw to configured size
-    button.lineStyle(
-      config.button.strokeThickness,
-      PIXI.utils.rgb2hex(config.button.stroke)
-    )
-    button.beginFill(PIXI.utils.rgb2hex(config.button.fill))
-    button.drawRect(0, 0, width, config.button.height)
-    button.endFill()
-    // Add styled button text
-    const text:PIXI.Text = new PIXI.Text(label, {
+  private createButtons():PIXI.Container {
+    const buttons = new HorizontalCenter(config.margin)
+    const buttonTextStyle:PIXI.TextStyle = new PIXI.TextStyle({
       align: config.button.text.align,
       lineJoin: config.button.text.lineJoin,
       fill: PIXI.utils.rgb2hex(config.button.text.fill),
       stroke: PIXI.utils.rgb2hex(config.button.text.stroke),
       strokeThickness: config.button.text.strokeThickness
     })
-    // Center the text on the button
-    text.position = new PIXI.Point(width / 2, config.button.height / 2)
-    text.anchor.set(.5)
-    button.addChild(text)
-    // Set up the event handlers
-    button.interactive = true
-    button.on('mouseup', action)
-    button.on('touchend', action)
-    this.stage.addChild(button)
-    return button
-  }
-
-  private createChecker():PIXI.Graphics {
-    const checker:PIXI.Graphics = new PIXI.Graphics()
-    // Semi-transparent so that the arrows can be seen
-    checker.alpha = config.checker.alpha
-    checker.lineStyle(
-      config.checker.strokeThickness,
-      PIXI.utils.rgb2hex(config.checker.stroke)
+    const buttonStyle:ButtonStyle = new ButtonStyle(
+      config.button.width,
+      config.button.height,
+      buttonTextStyle,
+      PIXI.utils.rgb2hex(config.button.fill),
+      config.button.strokeThickness,
+      PIXI.utils.rgb2hex(config.button.stroke)
     )
-    checker.beginFill(PIXI.utils.rgb2hex(config.checker.fill))
-    // Set scale relative to square size
-    checker.drawCircle(0, 0, this.squareSize * config.checker.relativeSize)
-    checker.endFill()
-    this.board.addChild(checker)
-    return checker
+    const smallButtonStyle:ButtonStyle = new ButtonStyle(
+      config.button.width / 2,
+      config.button.height,
+      buttonTextStyle,
+      PIXI.utils.rgb2hex(config.button.fill),
+      config.button.strokeThickness,
+      PIXI.utils.rgb2hex(config.button.stroke)
+    )
+    // Reduce the simulation size by one
+    const resizeDownButton:Button = new Button('-', smallButtonStyle)
+    resizeDownButton.on('pressed', () => this.emit('resize', -1))
+    buttons.addChild(resizeDownButton)
+    // Increase the simulation size by one
+    const resizeUpButton:Button = new Button('+', smallButtonStyle)
+    resizeUpButton.on('pressed', () => this.emit('resize', 1))
+    buttons.addChild(resizeUpButton)
+    // Shuffle the arrow directions
+    const shuffleButton:Button = new Button('Shuffle', buttonStyle)
+    shuffleButton.on('pressed', () => this.emit('shuffle'))
+    buttons.addChild(shuffleButton)
+    // Start the simulation; the controller will handle delaying the
+    // simulation's iterator to allow the visualization time to animate
+    const playButton:Button = new Button('Play', buttonStyle)
+    playButton.on('pressed', () => this.emit('play'))
+    buttons.addChild(playButton)
+    // Stop the simluation and move the checkers back to starting position
+    const stopButton:Button = new Button('Stop', buttonStyle)
+    stopButton.on('pressed', () => this.emit('stop'))
+    buttons.addChild(stopButton)
+    return buttons
   }
 
-  private shrinkBoardAsNeeded():void {
-    // Destroy extra board positions if the new layout is smaller than the
-    // last board
-    while(this.squares.length > this.simulation.size) {
-      // Delete the last row
-      const row:Square[] = this.squares[this.squares.length - 1]
-      while(row.length > 0)
-        row.pop().destroy()
-      this.squares.pop()
-      // Delete the last column from each row
-      for(let row of this.squares)
-        row.pop().destroy()
-    }
+  private createMessage():PIXI.Text {
+    // Message that appears on the top of the screen
+    // The message text is set by the controller using showMessage()
+    const message:PIXI.Text = new PIXI.Text(
+      'Press Play to Begin',
+      new PIXI.TextStyle({
+        align: config.message.align,
+        lineJoin: config.message.lineJoin,
+        fill: config.message.fill.map(color => PIXI.utils.rgb2hex(color)),
+        stroke: PIXI.utils.rgb2hex(config.message.stroke),
+        strokeThickness: config.message.strokeThickness
+      })
+    )
+    message.anchor.set(.5, 0)
+    message.position = new PIXI.Point(0, config.message.fromTop)
+    return message
   }
 
-  private setupBoard():void {
-    // even tracks the alternating square colors
-    let even:boolean = false
-    // Iterate over the board positions for the given board size
-    for(let row:number = 0 ; row < this.simulation.size ; row++) {
-      // Add the row if our board isn't that big yet
-      if(row > this.squares.length - 1)
-        this.squares.push([])
-      for(let col:number = 0 ; col < this.simulation.size ; col++) {
-        const position:Position = new Position(row, col)
-        // The simulation layout gives us the arrow direction to draw
-        const direction:Direction = this.simulation.layout[row][col]
-        this.setupSquare(position, even, direction)
-        // Stagger the square colors
-        even = !even
-      }
-      // For even-sized boards, have to stagger the square colors back
-      if(this.simulation.size % 2 === 0)
-        even = !even
-    }
+  private setupBoard(boardLayout:BoardLayout) {
+    // TBD: Move this sort of logic to layout container class
+    const boardPixelSize:number =
+      Math.min(this.screenLayout.bodyWidth, this.screenLayout.bodyHeight)
+    // The board will contain the checkers and squares
+    this.screenLayout.addToBody(
+      this.board = new DirectedCheckerBoard(
+        boardLayout,
+        boardPixelSize,
+        PIXI.utils.rgb2hex(config.board.odd.fill),
+        PIXI.utils.rgb2hex(config.board.even.fill),
+      )
+    )
+    this.board.position = new PIXI.Point(
+      0,
+      this.screenLayout.bodyHeight / 2
+    )
   }
 
-  private setupSquare(
-    position:Position,
-    even:boolean,
-    direction:Direction
-  ):void {
-    // If we don't yet have a square for this position, create it
-    if(position.col > this.squares[position.row].length - 1) {
-      this.squares[position.row].push(
-        new Square(this, position, even, direction))
-    }
-    // If we do have a square at this position already, tell it to reset
-    // its position, color, and arrow direction if needed
-    else {
-      this.squares[position.row][position.col].reset(even, direction)
-    }
+  private setupCheckers() {
+    // The checkers are children of the board for proper positioning
+    this.board.addChild(this.checker1 = new Checker(
+      this.board.squareSize * config.checker.relativeSize,
+      // Semi-transparent so that the arrows can be seen
+      config.checker.alpha,
+      config.checker.strokeThickness,
+      PIXI.utils.rgb2hex(config.checker.stroke),
+      PIXI.utils.rgb2hex(config.checker.fill)
+    ))
+    this.board.addChild(this.checker2 = new Checker(
+      this.board.squareSize * config.checker.relativeSize,
+      // Semi-transparent so that the arrows can be seen
+      config.checker.alpha,
+      config.checker.strokeThickness,
+      PIXI.utils.rgb2hex(config.checker.stroke),
+      PIXI.utils.rgb2hex(config.checker.fill)
+    ))
   }
 
-  // Fat arrow to preserve "this"
-  private renderLoop = ():void => {
-    requestAnimationFrame(this.renderLoop)
-    this.renderer.render(this.stage)
+  private resize(size:number):void {
+    // Create squares as needed, set their position and color,
+    // and set all arrow directions from the simulation layout
+    this.board.resize(size)
+    this.checker1.resize(this.board.squareSize * config.checker.relativeSize)
+    this.checker2.resize(this.board.squareSize * config.checker.relativeSize)
   }
 }
