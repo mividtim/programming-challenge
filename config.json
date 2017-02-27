@@ -5,7 +5,7 @@
   },
   "visualization": {
     "moveTime": 500,
-    "margin": 20,
+    "margin": 10,
     "message": {
       "fromTop": 20,
       "align": "center",
@@ -35,7 +35,7 @@
       }
     },
     "checker": {
-      "relativeSize": 0.3,
+      "relativeSize": 0.6,
       "alpha": 0.75,
       "fill": [0.0666, 0.0666, 0.0666],
       "stroke": [0.9333, 0.9333, 0.9333],

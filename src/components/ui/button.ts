@@ -38,7 +38,7 @@ export class ButtonStyle {
     height:number,
     textStyle:PIXI.TextStyle,
     fill:number = 0x542121,
-    strokeThickness:number = 2,
+    strokeThickness:number = 0,
     stroke:number = 0xededed
   ) {
     this.width = width

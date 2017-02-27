@@ -6,7 +6,7 @@ import {Visualization} from './visualization'
 
 const config = JSON.parse(fs.readFileSync('./config.json', 'utf-8'))
 
-class Application {
+export class Application {
 
   private simulation:Simulation
   private visualization:Visualization

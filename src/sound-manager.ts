@@ -1,8 +1,8 @@
 export class SoundManager {
 
-  sounds:{[key:string]:HTMLAudioElement} = {}
+  private sounds:{[key:string]:HTMLAudioElement} = {}
 
-  constructor(sounds:{[key:string]:string}) {
+  public constructor(sounds:{[key:string]:string}) {
     for(let sound in sounds) {
       const audio = new Audio()
       audio.src = sounds[sound]
@@ -10,8 +10,8 @@ export class SoundManager {
       this.sounds[sound] = audio
     }
   }
-  
-  play(soundName) {
+
+  public play(soundName) {
     this.sounds[soundName].pause()
     this.sounds[soundName].currentTime = 0
     this.sounds[soundName].play()

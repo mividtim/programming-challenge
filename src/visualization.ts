@@ -131,8 +131,29 @@ export class Visualization extends EventEmitter {
     const header:PIXI.Container = new HorizontalCenter(config.margin)
     header.addChild(this.message)
     const footer:PIXI.Container = this.createButtons()
-    this.screenLayout =
-      new FullScreenHeaderFooter(new HorizontalCenter, header, footer)
+    this.screenLayout = new FullScreenHeaderFooter(
+      new HorizontalCenter(),
+      header,
+      footer,
+      config.margin)
+  }
+
+  private createMessage():PIXI.Text {
+    // Message that appears on the top of the screen
+    // The message text is set by the controller using showMessage()
+    const message:PIXI.Text = new PIXI.Text(
+      'Press Play to Begin',
+      new PIXI.TextStyle({
+        align: config.message.align,
+        lineJoin: config.message.lineJoin,
+        fill: config.message.fill.map(color => PIXI.utils.rgb2hex(color)),
+        stroke: PIXI.utils.rgb2hex(config.message.stroke),
+        strokeThickness: config.message.strokeThickness
+      })
+    )
+    message.anchor.set(.5)
+    message.position = new PIXI.Point(0, config.message.fromTop)
+    return message
   }
 
   private createButtons():PIXI.Container {
@@ -182,24 +203,6 @@ export class Visualization extends EventEmitter {
     stopButton.on('pressed', () => this.emit('stop'))
     buttons.addChild(stopButton)
     return buttons
-  }
-
-  private createMessage():PIXI.Text {
-    // Message that appears on the top of the screen
-    // The message text is set by the controller using showMessage()
-    const message:PIXI.Text = new PIXI.Text(
-      'Press Play to Begin',
-      new PIXI.TextStyle({
-        align: config.message.align,
-        lineJoin: config.message.lineJoin,
-        fill: config.message.fill.map(color => PIXI.utils.rgb2hex(color)),
-        stroke: PIXI.utils.rgb2hex(config.message.stroke),
-        strokeThickness: config.message.strokeThickness
-      })
-    )
-    message.anchor.set(.5, 0)
-    message.position = new PIXI.Point(0, config.message.fromTop)
-    return message
   }
 
   private setupBoard(boardLayout:BoardLayout) {

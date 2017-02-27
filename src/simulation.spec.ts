@@ -3,62 +3,63 @@ import * as assert from 'assert'
 import {Simulation, SimulationState} from './simulation'
 import {BoardPosition, Direction} from './components/checkers/board-layout'
 
-let simulation:Simulation
-let path:BoardPosition[]
-let expectedMoves:number
-let expectedEndState:SimulationState
-
-beforeEach(function() {
-  simulation = new Simulation(10)
-  // Force the starting position to a known position
-  simulation.startingPosition = new BoardPosition(0, 0)
-  simulation.restart()
-})
-
-function setCircularLayout() {
-  // > v
-  // ^ <
-  simulation.resize(2)
-  simulation.boardLayout = [
-    [Direction.Right, Direction.Down],
-    [Direction.Up, Direction.Left]
-  ]
-  simulation.startingPosition = new BoardPosition(0, 0)
-  simulation.restart()
-  path = [
-    simulation.startingPosition,
-    new BoardPosition(0, 1),
-    new BoardPosition(1, 1),
-    new BoardPosition(1, 0),
-    simulation.startingPosition,
-    new BoardPosition(0, 1),
-    new BoardPosition(1, 1)
-  ]
-  expectedMoves = 8
-  expectedEndState = SimulationState.Circular
-}
-
-function setNoncircularLayout() {
-  // > v
-  // < <
-  simulation.resize(2)
-  simulation.boardLayout = [
-    [Direction.Right, Direction.Down],
-    [Direction.Left, Direction.Left]
-  ]
-  simulation.startingPosition = new BoardPosition(0, 0)
-  simulation.restart()
-  path = [
-    simulation.startingPosition,
-    new BoardPosition(0, 1),
-    new BoardPosition(1, 1),
-    new BoardPosition(1, 0)
-  ]
-  expectedMoves = 5
-  expectedEndState = SimulationState.Noncircular
-}
-
 describe('Simulation', function() {
+
+  let simulation:Simulation
+  let path:BoardPosition[]
+  let expectedMoves:number
+  let expectedEndState:SimulationState
+
+  beforeEach(function() {
+    simulation = new Simulation(10)
+    // Force the starting position to a known position
+    simulation.startingPosition = new BoardPosition(0, 0)
+    simulation.restart()
+  })
+
+  function setCircularLayout() {
+    // > v
+    // ^ <
+    simulation.resize(2)
+    simulation.boardLayout = [
+      [Direction.Right, Direction.Down],
+      [Direction.Up, Direction.Left]
+    ]
+    simulation.startingPosition = new BoardPosition(0, 0)
+    simulation.restart()
+    path = [
+      simulation.startingPosition,
+      new BoardPosition(0, 1),
+      new BoardPosition(1, 1),
+      new BoardPosition(1, 0),
+      simulation.startingPosition,
+      new BoardPosition(0, 1),
+      new BoardPosition(1, 1)
+    ]
+    expectedMoves = 8
+    expectedEndState = SimulationState.Circular
+  }
+
+  function setNoncircularLayout() {
+    // > v
+    // < <
+    simulation.resize(2)
+    simulation.boardLayout = [
+      [Direction.Right, Direction.Down],
+      [Direction.Left, Direction.Left]
+    ]
+    simulation.startingPosition = new BoardPosition(0, 0)
+    simulation.restart()
+    path = [
+      simulation.startingPosition,
+      new BoardPosition(0, 1),
+      new BoardPosition(1, 1),
+      new BoardPosition(1, 0)
+    ]
+    expectedMoves = 5
+    expectedEndState = SimulationState.Noncircular
+  }
+
   describe('#resize()', function() {
     it('changes the simulation size to the size passed', function() {
       assert(simulation.size === 10)
@@ -81,6 +82,7 @@ describe('Simulation', function() {
         assert(simulation.boardLayout[i].length === 5)
     })
   })
+
   describe('#samePosition', function() {
     it('checks that both the rows and the columns are the same', function() {
       const position1 = new BoardPosition(10, 15)
@@ -93,6 +95,7 @@ describe('Simulation', function() {
       assert(!Simulation.samePosition(position1, position2))
     })
   })
+
   describe('#restart()', function() {
     it('moves both pointers back to the starting position', function() {
       simulation.startingPosition = new BoardPosition(10, 10)
@@ -107,6 +110,7 @@ describe('Simulation', function() {
       ))
     })
   })
+
   describe('#next()', function() {
     it('calls the onmove callback', function() {
       let onmoveCalled:boolean = false

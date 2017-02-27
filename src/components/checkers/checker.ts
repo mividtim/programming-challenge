@@ -27,8 +27,8 @@ export class Checker extends PIXI.Graphics {
     this.clear()
     this.lineStyle(this.strokeThickness, this.stroke)
     this.beginFill(this.fill)
-    // Set scale relative to square size
-    this.drawCircle(0, 0, size)
+    // Set scale relative to square size: radius is size (diameter) / 2
+    this.drawCircle(0, 0, size / 2)
     this.endFill()
   }
 }

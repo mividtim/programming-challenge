@@ -10,25 +10,26 @@ export class FullScreenHeaderFooter extends PIXI.Container {
     body:PIXI.Container,
     header:PIXI.DisplayObject = null,
     footer:PIXI.DisplayObject = null,
+    margin:number = 0
   ) {
     super()
     this.body = body
     const screenWidth = document.documentElement.clientWidth
     const screenHeight = document.documentElement.clientHeight
-    const headerHeight = header ? header.getLocalBounds().height : 0
-    const footerHeight = footer ? footer.getLocalBounds().height : 0
+    const headerHeight = margin + (header ? header.getLocalBounds().bottom : 0)
+    const footerHeight = margin + (footer ? footer.getLocalBounds().bottom : 0)
     if(header) {
       this.addChild(header)
-      header.position = new PIXI.Point(screenWidth / 2, 0)
+      header.position = new PIXI.Point(screenWidth / 2, margin)
     }
     this.addChild(body)
-    body.position = new PIXI.Point(screenWidth / 2, headerHeight * 2)
+    body.position = new PIXI.Point(screenWidth / 2, headerHeight + margin)
     if(footer) {
       this.addChild(footer)
-      footer.position = new PIXI.Point(screenWidth / 2, screenHeight - footerHeight / 2)
+      footer.position = new PIXI.Point(screenWidth / 2, screenHeight - footerHeight - margin)
     }
     this.bodyWidth = screenWidth
-    this.bodyHeight = screenHeight - headerHeight * 2 - footerHeight * 2
+    this.bodyHeight = screenHeight - headerHeight - footerHeight - margin * 6
   }
 
   public addToBody(child:PIXI.DisplayObject):PIXI.DisplayObject {

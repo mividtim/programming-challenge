@@ -2,9 +2,11 @@ import * as PIXI from 'pixi.js'
 import {Direction} from '../checkers/board-layout'
 
 export class Arrow extends PIXI.Graphics {
-  direction:Direction = Direction.Up
-  color:number
-  constructor(
+
+  private direction:Direction = Direction.Up
+  private color:number
+
+  public constructor(
     size:number,
     direction:Direction = Direction.Up,
     color=0xffffff,

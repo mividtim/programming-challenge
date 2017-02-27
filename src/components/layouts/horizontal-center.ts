@@ -16,18 +16,20 @@ export class HorizontalCenter extends PIXI.Container {
   }
 
   private repositionChildren():void {
-    const fullWidth:number =
-      this.children
-        .map(child => child.getLocalBounds().width)
-        .reduce((sum, width) => sum += width, 0)
-      + this.margin * this.children.length - 1
-    let left:number = -fullWidth / 2
-    for(let c:number = 0 ; c < this.children.length ; c++) {
-      const child:PIXI.DisplayObject = this.children[c]
-      const width = child.getLocalBounds().width
-      // Center each item on its position
-      child.position.x = left + width / 2
-      left += width + this.margin
+    if(this.children.length > 0) {
+      const fullWidth:number =
+        this.children
+          .map(child => child.getLocalBounds().width)
+          .reduce((sum, width) => sum += width, 0)
+        + this.margin * (this.children.length - 1)
+      let left:number = -fullWidth / 2
+      for(let c:number = 0 ; c < this.children.length ; c++) {
+        const child:PIXI.DisplayObject = this.children[c]
+        const bounds = child.getLocalBounds()
+        // Center each item on its position
+        child.position.x = left - child.getLocalBounds().x
+        left += bounds.width + this.margin
+      }
     }
   }
 }
