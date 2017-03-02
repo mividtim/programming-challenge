@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {Button, ButtonStyle} from './button'
+import {Button, ButtonStyle} from '../../../src/components/ui/button'
 
 describe('Button', function() {
   let button:Button

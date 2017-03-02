@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {BoardPosition, Direction} from '../board-layout'
-import {DirectedCheckerSquare} from './directed-checker-square'
+import {BoardPosition} from '../../../../src/components/checkers/board-layout'
+import {Direction} from '../../../../src/components/ui/arrow'
+import {DirectedCheckerSquare} from '../../../../src/components/checkers/directed/directed-checker-square'
 
 describe('DirectedCheckerSquare', function() {
   const originalDirection = Direction.Right

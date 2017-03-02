@@ -1,9 +1,10 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {BoardLayout, Direction} from '../board-layout'
-import {DirectedCheckerBoard} from './directed-checker-board'
-import {DirectedCheckerSquare} from './directed-checker-square'
+import {BoardLayout} from '../../../../src/components/checkers/board-layout'
+import {Direction} from '../../../../src/components/ui/arrow'
+import {DirectedCheckerBoard} from '../../../../src/components/checkers/directed/directed-checker-board'
+import {DirectedCheckerSquare} from '../../../../src/components/checkers/directed/directed-checker-square'
 
 describe('DirectedCheckerBoard', function() {
   const circularLayout:BoardLayout = [

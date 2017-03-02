@@ -1,10 +1,4 @@
-
-export const enum Direction {
-  Up = 0,
-  Right,
-  Down,
-  Left
-}
+import {Direction} from '../ui/arrow'
 
 export type BoardLayout = Direction[][]
 

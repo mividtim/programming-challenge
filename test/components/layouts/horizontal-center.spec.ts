@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {HorizontalCenter} from './horizontal-center'
+import {HorizontalCenter} from '../../../src/components/layouts/horizontal-center'
 
 describe('HorizontalCenter', function() {
   let layout:HorizontalCenter

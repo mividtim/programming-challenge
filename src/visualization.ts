@@ -2,12 +2,9 @@ import * as fs from 'fs'
 import * as EventEmitter from 'events'
 import * as PIXI from 'pixi.js'
 import {TweenLite} from 'gsap/TweenLite'
-import {SoundManager} from './sound-manager'
-import {
-  BoardPosition,
-  Direction,
-  BoardLayout
-} from './components/checkers/board-layout'
+import {SoundManager} from './components/ui/sound-manager'
+import {BoardPosition, BoardLayout} from './components/checkers/board-layout'
+import {Direction} from './components/ui/arrow'
 import {Button, ButtonStyle} from './components/ui/button'
 import {Checker} from './components/checkers/checker'
 import {DirectedCheckerBoard} from

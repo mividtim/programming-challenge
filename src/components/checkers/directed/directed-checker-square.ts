@@ -1,6 +1,7 @@
 import {Arrow} from '../../ui/arrow'
 import {CheckerSquare} from '../checker-square'
-import {BoardPosition, Direction} from '../board-layout'
+import {BoardPosition} from '../board-layout'
+import {Direction} from '../../ui/arrow'
 
 export class DirectedCheckerSquare extends CheckerSquare {
 

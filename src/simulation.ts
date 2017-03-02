@@ -1,9 +1,6 @@
 import * as EventsEmitter from 'events'
-import {
-  BoardLayout,
-  BoardPosition,
-  Direction
-} from './components/checkers/board-layout'
+import {BoardLayout, BoardPosition,} from './components/checkers/board-layout'
+import {Direction} from './components/ui/arrow'
 
 export const enum SimulationState {
   Running,

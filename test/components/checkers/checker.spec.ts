@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {Checker} from './checker'
+import {Checker} from '../../../src/components/checkers/checker'
 
 describe('Checker', function() {
   const originalSize:number = 20

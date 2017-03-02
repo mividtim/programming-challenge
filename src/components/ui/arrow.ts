@@ -1,5 +1,11 @@
 import * as PIXI from 'pixi.js'
-import {Direction} from '../checkers/board-layout'
+
+export const enum Direction {
+  Up = 0,
+  Right,
+  Down,
+  Left
+}
 
 export class Arrow extends PIXI.Graphics {
 

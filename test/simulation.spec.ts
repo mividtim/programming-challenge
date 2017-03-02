@@ -1,7 +1,8 @@
 import {beforeEach, describe, it} from 'mocha'
 import * as assert from 'assert'
-import {Simulation, SimulationState} from './simulation'
-import {BoardPosition, Direction} from './components/checkers/board-layout'
+import {Simulation, SimulationState} from '../src/simulation'
+import {BoardPosition} from '../src/components/checkers/board-layout'
+import {Direction} from '../src/components/ui/arrow'
 
 describe('Simulation', function() {
 

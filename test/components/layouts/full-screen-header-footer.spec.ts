@@ -1,7 +1,7 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {FullScreenHeaderFooter} from './full-screen-header-footer'
+import {FullScreenHeaderFooter} from '../../../src/components/layouts/full-screen-header-footer'
 
 describe('FullScreenHeaderFooter', function() {
   const screenWidth = document.documentElement.clientWidth

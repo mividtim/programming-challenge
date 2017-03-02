@@ -1,8 +1,7 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {Direction} from '../checkers/board-layout'
-import {Arrow} from './arrow'
+import {Arrow, Direction} from '../../../src/components/ui/arrow'
 
 describe('Arrow', function() {
   const originalSize:number = 20

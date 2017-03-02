@@ -1,8 +1,8 @@
 import * as PIXI from 'pixi.js'
 import * as assert from 'assert'
 import {beforeEach, describe, it} from 'mocha'
-import {BoardPosition} from './board-layout'
-import {CheckerSquare} from './checker-square'
+import {BoardPosition} from '../../../src/components/checkers/board-layout'
+import {CheckerSquare} from '../../../src/components/checkers/checker-square'
 
 describe('CheckerBoard', function() {
   const originalSize:number = 10
